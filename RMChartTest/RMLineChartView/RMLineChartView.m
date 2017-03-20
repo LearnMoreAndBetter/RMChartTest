@@ -15,7 +15,7 @@ const CGFloat RMLineChartViewBottomTextHeight = 20.f;//底部标示文本高度
 const CGFloat RMLineChartViewPadding = 10.f;//边距
 const NSUInteger RMLineChartViewHorizontalLineCount = 5;//水平线数
 
-@interface RMLineChartView()
+@interface RMLineChartView()<CAAnimationDelegate>
 {
     CGFloat _validWidth;
     CGFloat _validHeight;
@@ -26,6 +26,7 @@ const NSUInteger RMLineChartViewHorizontalLineCount = 5;//水平线数
     UIView *_popView;//浮层
     RMCircleButton *_selectButton;
     UIImageView *_imgView;
+    CAShapeLayer *_shapeLayer;
 }
 @property (nonatomic, copy)NSMutableArray *circleButtonArray;//存放button的数组
 
@@ -56,6 +57,8 @@ const NSUInteger RMLineChartViewHorizontalLineCount = 5;//水平线数
     _dataLists = dataLists;
     //移除浮层
     [_popView removeFromSuperview];
+    [_imgView removeFromSuperview];
+    
     //重绘标尺和折线
     _minRule = MAXFLOAT;
     _maxRule = -_minRule;
@@ -95,9 +98,7 @@ const NSUInteger RMLineChartViewHorizontalLineCount = 5;//水平线数
     // Drawing code
     [self drawRulerLine];
     [self drawText];
-    [self drawFoldLine];
-    [self drawGradientLayer];
-    [self drawLineButton];
+    [self drawFoldLineWithAnimation:YES];
 }
 
 //画标尺线
@@ -154,7 +155,7 @@ const NSUInteger RMLineChartViewHorizontalLineCount = 5;//水平线数
 }
 
 //画折线
-- (void)drawFoldLine{
+- (void)drawFoldLineWithAnimation:(BOOL)animation{
     [self.circleButtonArray makeObjectsPerformSelector:@selector(removeFromSuperview)];
     [self.circleButtonArray removeAllObjects];
     CGFloat scaleY = 1.0/(_maxRule - _minRule)*(_validHeight);
@@ -170,9 +171,46 @@ const NSUInteger RMLineChartViewHorizontalLineCount = 5;//水平线数
         [path addLineToPoint:endPoint];
         
     }
-    //path.lineWidth = 2;
-    [RMBLACKCOLOR setStroke];
-    [path stroke];
+    if (!animation) {
+        path.lineWidth = 2;
+        [RMRGB(230, 82, 82) setStroke];
+        [path stroke];
+        
+        [self drawLineButton];
+        return;
+    }
+    if (!_shapeLayer) {
+        _shapeLayer = [CAShapeLayer layer];
+        [self.layer addSublayer:_shapeLayer];
+        _shapeLayer.strokeColor = RMRGB(230, 82, 82).CGColor;
+        _shapeLayer.fillColor = [UIColor clearColor].CGColor;
+    }
+    
+    _shapeLayer.path = path.CGPath;
+    _shapeLayer.lineWidth = 2.f;
+    
+    //创建一个strokeEnd路径的动画
+    CABasicAnimation *pathAnimation = [CABasicAnimation animationWithKeyPath:@"strokeEnd"];
+    pathAnimation.duration = 2.0;
+    pathAnimation.timingFunction = [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionEaseInEaseOut];
+    pathAnimation.fromValue = @0.0f;
+    pathAnimation.toValue   = @1.0f;
+    pathAnimation.delegate = self;
+    pathAnimation.fillMode = kCAFillModeForwards;
+    //保证这个animation结束后不要被移除出layer  这样才能通过“[self.layer animationForKey:@“key”];”查找到对应key的animation。
+    pathAnimation.removedOnCompletion = NO;
+    [_shapeLayer addAnimation:pathAnimation forKey:@"lineAnimation"];
+}
+
+- (void)animationDidStop:(CAAnimation *)anim finished:(BOOL)flag{
+    if (anim == [_shapeLayer animationForKey:@"lineAnimation"]) {
+        [self drawGradientLayerWithAnimation:YES];
+        [self drawLineButton];
+    }
+    if (anim == [_imgView.layer animationForKey:@"opacity"]) {
+        //浅入动画结束
+        
+    }
 }
 
 //画拐角button
@@ -197,7 +235,7 @@ const NSUInteger RMLineChartViewHorizontalLineCount = 5;//水平线数
     }
 }
 
-- (void)drawGradientLayer{
+- (void)drawGradientLayerWithAnimation:(BOOL)animation{
     CGFloat scaleY = 1.0/(_maxRule - _minRule)*(_validHeight);
     CGFloat hPadding = _validWidth/_dataLists.count;
     
@@ -229,7 +267,20 @@ const NSUInteger RMLineChartViewHorizontalLineCount = 5;//水平线数
     [_imgView removeFromSuperview];
     _imgView = [[UIImageView alloc] initWithImage:img];
     [self addSubview:_imgView];
-
+    
+    if (!animation) {
+        return;
+    }
+     //添加浅入动画
+    CABasicAnimation *pathAnimation = [CABasicAnimation animationWithKeyPath:@"opacity"];
+    pathAnimation.duration = 2.0;
+    pathAnimation.timingFunction = [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionEaseInEaseOut];
+    pathAnimation.fromValue = @0.0f;
+    pathAnimation.toValue   = @1.0f;
+    pathAnimation.delegate = self;
+    pathAnimation.fillMode = kCAFillModeForwards;
+    pathAnimation.removedOnCompletion = NO;
+    [_imgView.layer addAnimation:pathAnimation forKey:@"opacity"];
 }
 
 

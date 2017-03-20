@@ -80,7 +80,9 @@ const NSUInteger RMBarChartViewHorizontalLineCount = 5;//水平线数
     // Drawing code
     [self drawRulerLine];
     [self drawText];
-    [self drawBarGraph];
+    //[self drawBarGraph];
+    [self drawAnimationBarGraph];
+    //[self drawGradientLayer];
 }
 
 //画标尺线
@@ -136,25 +138,10 @@ const NSUInteger RMBarChartViewHorizontalLineCount = 5;//水平线数
     }
 }
 
-//柱状图
-- (void)drawBarGraph{
+//画渐变色柱状图
+- (void)drawGradientLayer{
     CGFloat scaleY = 1.0/(_maxRule - _minRule)*(_validHeight);
     CGFloat hPadding = _validWidth/_dataLists.count;
-   /* UIBezierPath *path = [UIBezierPath bezierPath];
-    for (NSInteger i = 0; i < _dataLists.count; i++) {
-        CGFloat startX = RMBarChartViewLeftTextWidth + hPadding/2 + hPadding * i;
-        RMChartModel *model = _dataLists[i];
-        [path moveToPoint:CGPointMake(startX, _validHeight)];
-        [path addLineToPoint:CGPointMake(startX, _validHeight - [model.value floatValue]*scaleY)];
-    }
-    //path.lineWidth = 10.f;
-    //[[UIColor blueColor] setStroke];
-    //[path stroke];
-    shapeLayer.path = path.CGPath;
-    shapeLayer.lineWidth = 10.f;
-    
-    [self.layer addSublayer:shapeLayer];
-  */
     //创建CGContextRef
     UIGraphicsBeginImageContext(self.bounds.size);
     CGContextRef gc = UIGraphicsGetCurrentContext();
@@ -172,9 +159,9 @@ const NSUInteger RMBarChartViewHorizontalLineCount = 5;//水平线数
         CGPathCloseSubpath(path2);
         //绘制渐变
         [self drawLinearGradient:gc path:path2 startColor:RMRGB(255, 193, 193).CGColor endColor:RMRGB(255, 114, 86).CGColor];
-
         //注意释放CGMutablePathRef
         CGPathRelease(path2);
+        
     }
     //从Context中获取图像，并显示在界面上
     UIImage *img = UIGraphicsGetImageFromCurrentImageContext();
@@ -182,6 +169,55 @@ const NSUInteger RMBarChartViewHorizontalLineCount = 5;//水平线数
     [_imgView removeFromSuperview];
     _imgView = [[UIImageView alloc] initWithImage:img];
     [self addSubview:_imgView];
+}
+
+//柱状图
+- (void)drawBarGraph{
+    CGFloat scaleY = 1.0/(_maxRule - _minRule)*(_validHeight);
+    CGFloat hPadding = _validWidth/_dataLists.count;
+    UIBezierPath *path = [UIBezierPath bezierPath];
+    for (NSInteger i = 0; i < _dataLists.count; i++) {
+        CGFloat startX = RMBarChartViewLeftTextWidth + hPadding/2 + hPadding * i;
+        RMChartModel *model = _dataLists[i];
+        [path moveToPoint:CGPointMake(startX, _validHeight)];
+        [path addLineToPoint:CGPointMake(startX, _validHeight - [model.value floatValue]*scaleY)];
+    }
+    CAShapeLayer *shapeLayer = [CAShapeLayer layer];
+    shapeLayer.path = path.CGPath;
+    shapeLayer.lineWidth = 10.f;
+    shapeLayer.strokeColor = RMRGB(255, 193, 193).CGColor;
+    [self.layer addSublayer:shapeLayer];
+}
+
+
+//画动态柱状图
+- (void)drawAnimationBarGraph{
+  CGFloat scaleY = 1.0/(_maxRule - _minRule)*(_validHeight);
+    CGFloat hPadding = _validWidth/_dataLists.count;
+    
+    for (NSInteger i = 0; i < _dataLists.count; i++) {
+        UIBezierPath *path = [UIBezierPath bezierPath];
+        CGFloat startX = RMBarChartViewLeftTextWidth + hPadding/2 + hPadding * i;
+        RMChartModel *model = _dataLists[i];
+        [path moveToPoint:CGPointMake(startX, _validHeight)];
+        [path addLineToPoint:CGPointMake(startX, _validHeight - [model.value floatValue]*scaleY)];
+        
+        CAShapeLayer *shapeLayer = [CAShapeLayer layer];
+        shapeLayer.path = path.CGPath;
+        shapeLayer.lineWidth = 10.f;
+        shapeLayer.strokeColor = RMRGB(255, 193, 193).CGColor;
+        [self.layer addSublayer:shapeLayer];
+        
+        //创建一个strokeEnd路径的动画
+        CABasicAnimation *pathAnimation = [CABasicAnimation animationWithKeyPath:@"strokeEnd"];
+        pathAnimation.duration = 2.0;
+        pathAnimation.timingFunction = [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionEaseInEaseOut];
+        pathAnimation.fromValue = @0.0f;
+        pathAnimation.toValue   = @1.0f;
+        //动画终点
+        shapeLayer.strokeEnd = 1.0;
+        [shapeLayer addAnimation:pathAnimation forKey:nil];
+    }
 }
 
 - (void)drawLinearGradient:(CGContextRef)context

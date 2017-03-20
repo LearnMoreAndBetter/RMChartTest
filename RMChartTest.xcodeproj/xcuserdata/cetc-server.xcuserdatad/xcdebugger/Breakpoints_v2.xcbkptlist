@@ -20,11 +20,11 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "RMChartTest/RMLineChartView/RMLineChartView.m"
-            timestampString = "511664790.739542"
+            timestampString = "511683097.56298"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "315"
-            endingLineNumber = "315"
+            startingLineNumber = "366"
+            endingLineNumber = "366"
             landmarkName = "-drawPopViewAtPoint:withText:"
             landmarkType = "7">
          </BreakpointContent>
@@ -36,11 +36,11 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "RMChartTest/RMLineChartView/RMLineChartView.m"
-            timestampString = "511664790.739542"
+            timestampString = "511683097.56298"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "303"
-            endingLineNumber = "303"
+            startingLineNumber = "354"
+            endingLineNumber = "354"
             landmarkName = "-drawPopViewAtPoint:withText:"
             landmarkType = "7">
          </BreakpointContent>
@@ -52,11 +52,11 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "RMChartTest/RMLineChartView/RMLineChartView.m"
-            timestampString = "511663697.418766"
+            timestampString = "511673256.766156"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "57"
-            endingLineNumber = "57"
+            startingLineNumber = "58"
+            endingLineNumber = "58"
             landmarkName = "-setDataLists:"
             landmarkType = "7">
          </BreakpointContent>
