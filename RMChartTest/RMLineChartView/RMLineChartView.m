@@ -25,6 +25,7 @@ const NSUInteger RMLineChartViewHorizontalLineCount = 5;//水平线数
     NSInteger _minRule;
     UIView *_popView;//浮层
     RMCircleButton *_selectButton;
+    UIImageView *_imgView;
 }
 @property (nonatomic, copy)NSMutableArray *circleButtonArray;//存放button的数组
 
@@ -95,6 +96,8 @@ const NSUInteger RMLineChartViewHorizontalLineCount = 5;//水平线数
     [self drawRulerLine];
     [self drawText];
     [self drawFoldLine];
+    [self drawGradientLayer];
+    [self drawLineButton];
 }
 
 //画标尺线
@@ -150,38 +153,114 @@ const NSUInteger RMLineChartViewHorizontalLineCount = 5;//水平线数
     }
 }
 
-//画折线，和拐角button
+//画折线
 - (void)drawFoldLine{
     [self.circleButtonArray makeObjectsPerformSelector:@selector(removeFromSuperview)];
     [self.circleButtonArray removeAllObjects];
     CGFloat scaleY = 1.0/(_maxRule - _minRule)*(_validHeight);
     CGFloat hPadding = _validWidth/_dataLists.count;
+    
+    RMChartModel *startModel = _dataLists[0];
+    CGPoint startPoint = CGPointMake(RMLineChartViewLeftTextWidth + hPadding/2, _validHeight - ([startModel.value floatValue] - _minRule)* scaleY);
     UIBezierPath *path = [UIBezierPath bezierPath];
-    for (NSInteger i = 0; i < [_dataLists count]; i ++) {
-        RMChartModel *model = _dataLists[i];
-        CGPoint startPoint = CGPointMake(RMLineChartViewLeftTextWidth + hPadding/2 + hPadding * i, _validHeight - ([model.value floatValue] - _minRule)* scaleY);
-        if (i != [_dataLists count] - 1) {
-            RMChartModel *nextModel = _dataLists[i + 1];
-            CGPoint endPoint = CGPointMake(RMLineChartViewLeftTextWidth + hPadding/2 + hPadding * (i+1), _validHeight - ([nextModel.value floatValue] - _minRule)* scaleY);
-            [path moveToPoint:startPoint];
-            [path addLineToPoint:endPoint];
-        }
+    [path moveToPoint:startPoint];
+    for (NSInteger i = 1; i < [_dataLists count]; i ++) {
+        RMChartModel *nextModel = _dataLists[i];
+        CGPoint endPoint = CGPointMake(RMLineChartViewLeftTextWidth + hPadding/2 + hPadding * (i), _validHeight - ([nextModel.value floatValue] - _minRule)* scaleY);
+        [path addLineToPoint:endPoint];
         
-        //添加拐角button
-        RMCircleButton *circleBtn = [[RMCircleButton alloc] initWithFrame:CGRectMake(0, 0, 30, 30)];
-        circleBtn.backgroundColor =  [UIColor clearColor];
-        circleBtn.strokeColor = RMBLACKCOLOR;
-        circleBtn.fillColor =  [UIColor whiteColor];
-        circleBtn.center = startPoint;
-        circleBtn.tag = i + 101;
-        [circleBtn addTarget:self action:@selector(clickCircle:) forControlEvents:UIControlEventTouchUpInside];
-        [self addSubview:circleBtn];
-        [self.circleButtonArray addObject:circleBtn];
     }
     //path.lineWidth = 2;
     [RMBLACKCOLOR setStroke];
     [path stroke];
 }
+
+//画拐角button
+- (void)drawLineButton{
+    [self.circleButtonArray makeObjectsPerformSelector:@selector(removeFromSuperview)];
+    [self.circleButtonArray removeAllObjects];
+    CGFloat scaleY = 1.0/(_maxRule - _minRule)*(_validHeight);
+    CGFloat hPadding = _validWidth/_dataLists.count;
+    for (NSInteger i = 0; i < [_dataLists count]; i ++) {
+        RMChartModel *model = _dataLists[i];
+        CGPoint buttonCenterPoint = CGPointMake(RMLineChartViewLeftTextWidth + hPadding/2 + hPadding * i, _validHeight - ([model.value floatValue] - _minRule)* scaleY);
+        //添加拐角button
+        RMCircleButton *circleBtn = [[RMCircleButton alloc] initWithFrame:CGRectMake(0, 0, 30, 30)];
+        circleBtn.backgroundColor =  [UIColor clearColor];
+        circleBtn.strokeColor = RMBLACKCOLOR;
+        circleBtn.fillColor =  [UIColor whiteColor];
+        circleBtn.center = buttonCenterPoint;
+        circleBtn.tag = i + 101;
+        [circleBtn addTarget:self action:@selector(clickCircle:) forControlEvents:UIControlEventTouchUpInside];
+        [self addSubview:circleBtn];
+        [self.circleButtonArray addObject:circleBtn];
+    }
+}
+
+- (void)drawGradientLayer{
+    CGFloat scaleY = 1.0/(_maxRule - _minRule)*(_validHeight);
+    CGFloat hPadding = _validWidth/_dataLists.count;
+    
+    //创建CGContextRef
+    UIGraphicsBeginImageContext(self.bounds.size);
+    CGContextRef gc = UIGraphicsGetCurrentContext();
+
+    //创建CGMutablePathRef
+    CGMutablePathRef path2 = CGPathCreateMutable();
+    CGPoint startPoint = CGPointMake(RMLineChartViewLeftTextWidth + hPadding/2, _validHeight);
+    CGPathMoveToPoint(path2, NULL,startPoint.x, startPoint.y);
+    for (NSInteger i = 0; i < [_dataLists count]; i ++) {
+        RMChartModel *model = _dataLists[i];
+        CGPoint point = CGPointMake(RMLineChartViewLeftTextWidth + hPadding/2 + hPadding * i, _validHeight - ([model.value floatValue] - _minRule)* scaleY);
+        CGPathAddLineToPoint(path2, NULL, point.x, point.y);
+    }
+    CGPoint endPoint = CGPointMake(RMLineChartViewLeftTextWidth + hPadding/2 + hPadding * ([_dataLists count] - 1), _validHeight);
+    CGPathAddLineToPoint(path2, NULL, endPoint.x, endPoint.y);
+    CGPathCloseSubpath(path2);
+
+    //绘制渐变
+    [self drawLinearGradient:gc path:path2 startColor:RMRGB(255, 193, 193).CGColor endColor:RMRGB(255, 114, 86).CGColor];
+
+    //注意释放CGMutablePathRef
+    CGPathRelease(path2);
+    //从Context中获取图像，并显示在界面上
+    UIImage *img = UIGraphicsGetImageFromCurrentImageContext();
+    UIGraphicsEndImageContext();
+    [_imgView removeFromSuperview];
+    _imgView = [[UIImageView alloc] initWithImage:img];
+    [self addSubview:_imgView];
+
+}
+
+
+- (void)drawLinearGradient:(CGContextRef)context
+                      path:(CGPathRef)path
+                startColor:(CGColorRef)startColor
+                  endColor:(CGColorRef)endColor
+{
+    CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
+    CGFloat locations[] = { 0.0, 1.0 };
+
+    NSArray *colors = @[(__bridge id)startColor , (__bridge id)endColor];
+    CGGradientRef gradient = CGGradientCreateWithColors(colorSpace, (__bridge CFArrayRef) colors, locations);
+    CGRect pathRect = CGPathGetBoundingBox(path);
+
+    //具体方向可根据需求修改
+    CGPoint startPoint = CGPointMake(CGRectGetMidX(pathRect), _validHeight);
+    CGPoint endPoint = CGPointMake(CGRectGetMidX(pathRect), 0);
+
+    CGContextSaveGState(context);
+    CGContextAddPath(context, path);
+    CGContextClip(context);
+    CGContextDrawLinearGradient(context, gradient, startPoint, endPoint, 0);
+    CGContextRestoreGState(context);
+
+    CGGradientRelease(gradient);
+    CGColorSpaceRelease(colorSpace);
+}
+
+
+
 
 //点击效果
 - (void)clickCircle:(RMCircleButton *)button{

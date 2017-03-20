@@ -23,6 +23,7 @@ const NSUInteger RMBarChartViewHorizontalLineCount = 5;//水平线数
     NSInteger _maxRule;
     NSInteger _midRule;
     NSInteger _minRule;
+    UIImageView *_imgView;
 }
 
 @end
@@ -139,17 +140,72 @@ const NSUInteger RMBarChartViewHorizontalLineCount = 5;//水平线数
 - (void)drawBarGraph{
     CGFloat scaleY = 1.0/(_maxRule - _minRule)*(_validHeight);
     CGFloat hPadding = _validWidth/_dataLists.count;
-    UIBezierPath *path = [UIBezierPath bezierPath];
+   /* UIBezierPath *path = [UIBezierPath bezierPath];
     for (NSInteger i = 0; i < _dataLists.count; i++) {
         CGFloat startX = RMBarChartViewLeftTextWidth + hPadding/2 + hPadding * i;
         RMChartModel *model = _dataLists[i];
         [path moveToPoint:CGPointMake(startX, _validHeight)];
         [path addLineToPoint:CGPointMake(startX, _validHeight - [model.value floatValue]*scaleY)];
     }
-    path.lineWidth = 10.f;
-    [[UIColor blueColor] setStroke];
-    [path stroke];
+    //path.lineWidth = 10.f;
+    //[[UIColor blueColor] setStroke];
+    //[path stroke];
+    shapeLayer.path = path.CGPath;
+    shapeLayer.lineWidth = 10.f;
+    
+    [self.layer addSublayer:shapeLayer];
+  */
+    //创建CGContextRef
+    UIGraphicsBeginImageContext(self.bounds.size);
+    CGContextRef gc = UIGraphicsGetCurrentContext();
+
+    //创建CGMutablePathRef
+    for (NSInteger i = 0; i < [_dataLists count]; i ++) {
+        CGMutablePathRef path2 = CGPathCreateMutable();
+        CGFloat startX = RMBarChartViewLeftTextWidth + hPadding/2 + hPadding * i;
+        RMChartModel *model = _dataLists[i];
+        
+        CGPathMoveToPoint(path2, NULL,startX - 5, _validHeight);
+        CGPathAddLineToPoint(path2, NULL, startX + 5, _validHeight);
+        CGPathAddLineToPoint(path2, NULL, startX + 5, _validHeight - ([model.value floatValue])* scaleY);
+        CGPathAddLineToPoint(path2, NULL, startX - 5, _validHeight - ([model.value floatValue])* scaleY);
+        CGPathCloseSubpath(path2);
+        //绘制渐变
+        [self drawLinearGradient:gc path:path2 startColor:RMRGB(255, 193, 193).CGColor endColor:RMRGB(255, 114, 86).CGColor];
+
+        //注意释放CGMutablePathRef
+        CGPathRelease(path2);
+    }
+    //从Context中获取图像，并显示在界面上
+    UIImage *img = UIGraphicsGetImageFromCurrentImageContext();
+    UIGraphicsEndImageContext();
+    [_imgView removeFromSuperview];
+    _imgView = [[UIImageView alloc] initWithImage:img];
+    [self addSubview:_imgView];
 }
 
+- (void)drawLinearGradient:(CGContextRef)context
+                      path:(CGPathRef)path
+                startColor:(CGColorRef)startColor
+                  endColor:(CGColorRef)endColor
+{
+    CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
+    CGFloat locations[] = { 0.0, 1.0 };
+
+    NSArray *colors = @[(__bridge id)startColor , (__bridge id)endColor];
+    CGGradientRef gradient = CGGradientCreateWithColors(colorSpace, (__bridge CFArrayRef) colors, locations);
+    //具体方向可根据需求修改
+    CGPoint startPoint = CGPointMake(0, _validHeight);
+    CGPoint endPoint = CGPointMake(0, 0);
+
+    CGContextSaveGState(context);
+    CGContextAddPath(context, path);
+    CGContextClip(context);
+    CGContextDrawLinearGradient(context, gradient, startPoint, endPoint, 0);
+    CGContextRestoreGState(context);
+
+    CGGradientRelease(gradient);
+    CGColorSpaceRelease(colorSpace);
+}
 
 @end

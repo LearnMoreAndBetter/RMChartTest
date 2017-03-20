@@ -176,6 +176,7 @@
         _pageCtrl = [[UIPageControl alloc] init];
         _pageCtrl.pageIndicatorTintColor = RMGRAYLINECOLOR;
         _pageCtrl.currentPageIndicatorTintColor = RM_MAIN_COLOR;
+        _pageCtrl.userInteractionEnabled = NO;
     }
     return _pageCtrl;
 }
